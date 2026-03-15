@@ -29,19 +29,21 @@
         .fav-filter-label { font-weight: bold; color: var(--fav); cursor: pointer; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 
         .toc { background: #e8f4f8; padding: 15px 20px; border-radius: 6px; margin-bottom: 30px; border: 1px solid #d1e9f0; }
-        .toc h2 { margin-top: 0; font-size: 1.1em; color: var(--primary); border-bottom: 1px solid #b3d7e2; padding-bottom: 5px; }
+        .toc h2 { margin-top: 0; font-size: 1.1em; color: var(--primary); border-bottom: 1px solid #b3d7e2; padding-bottom: 5px; display: flex; align-items: baseline; gap: 10px; }
         .toc ul { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0 0; }
-        .toc li a { text-decoration: none; color: white; background: var(--secondary); padding: 6px 14px; border-radius: 20px; font-size: 0.85em; transition: 0.2s; display: inline-block; }
-        .toc li a:hover { background: var(--primary); transform: translateY(-2px); }
+        /* 目次のliをドラッグ可能にする */
+        .toc li { cursor: grab; }
+        .toc li:active { cursor: grabbing; }
+        .toc li a { text-decoration: none; color: white; background: var(--secondary); padding: 6px 14px; border-radius: 20px; font-size: 0.85em; transition: 0.2s; display: inline-block; pointer-events: none; } /* ドラッグ時の誤動作防止 */
 
         .category-section { margin-bottom: 40px; scroll-margin-top: 20px; position: relative; }
-        .category-header { background: var(--primary); color: white; padding: 10px 20px; margin: 0; font-size: 1.2em; border-radius: 6px 6px 0 0; display: flex; justify-content: space-between; align-items: center; cursor: grab; } /* cursor追加 */
-        .category-header:active { cursor: grabbing; }
+        .category-header { background: var(--primary); color: white; padding: 10px 20px; margin: 0; font-size: 1.2em; border-radius: 6px 6px 0 0; display: flex; justify-content: space-between; align-items: center; }
         .cat-actions { display: flex; gap: 5px; }
 
         table { width: 100%; border-collapse: collapse; table-layout: fixed; }
         th, td { border: 1px solid #ddd; padding: 15px; vertical-align: top; }
-        th { background: #f8f9fa; width: 25%; color: #555; font-weight: bold; position: relative; font-size: 0.9em; cursor: grab; } /* cursor追加 */
+        th { background: #f8f9fa; width: 25%; color: #555; font-weight: bold; position: relative; font-size: 0.9em; cursor: grab; }
+        th:active { cursor: grabbing; }
         
         .template-box { background: #fafafa; border: 1px solid #e0e0e0; padding: 15px; border-radius: 4px; white-space: pre-wrap; font-size: 0.95em; color: #444; margin-bottom: 10px; }
         .edit-input, .edit-textarea { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; }
@@ -49,7 +51,7 @@
         
         /* ドラッグ中のスタイル */
         .sortable-ghost { opacity: 0.4; background-color: var(--secondary) !important; }
-        .sortable-chosen { background-color: #f0f0f0; }
+        .toc .sortable-ghost { opacity: 0.5; transform: scale(0.95); }
 
         .tag-badge { background: #e0e0e0; color: #333; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; margin-right: 5px; margin-top: 5px; display: inline-block; }
         .meta-info { margin-top: 10px; font-size: 0.75em; color: #7f8c8d; display: flex; justify-content: space-between; align-items: center; }
@@ -217,7 +219,6 @@
             const catSection = document.createElement('div');
             catSection.className = 'category-section';
             catSection.id = cat.id || `cat-${cIndex}`;
-            catSection.dataset.index = cIndex; // 並び替え用
 
             catSection.innerHTML = `
                 <h2 class="category-header">
@@ -236,7 +237,6 @@
                 if (isFiltering && !filteredTemplates.includes(tpl) && !(editingState.catIndex === cIndex && editingState.tplIndex === tIndex)) return;
 
                 const tr = document.createElement('tr');
-                tr.dataset.index = tIndex; // 並び替え用
                 const isEditing = (editingState.catIndex === cIndex && editingState.tplIndex === tIndex);
                 const isFav = favorites.includes(tpl.id);
                 const copyCount = tpl.copyCount || 0;
@@ -293,10 +293,15 @@
         if (visibleCatsForToc.length > 0) {
             const tocDiv = document.createElement('div');
             tocDiv.className = 'toc';
-            tocDiv.innerHTML = `<h2>目次</h2>`;
+            // 目次のタイトルに案内を追加
+            tocDiv.innerHTML = `<h2>目次 <span style="font-size: 0.75em; font-weight: normal; color: #7f8c8d;">(ドラッグ＆ドロップで並び替え)</span></h2>`;
             const ul = document.createElement('ul');
+            ul.id = 'toc-list'; // SortableJS用にIDを追加
+            
             visibleCatsForToc.forEach(item => {
                 const li = document.createElement('li');
+                // クリックでジャンプさせるためのイベント追加
+                li.onclick = () => { window.location.hash = item.id; };
                 li.innerHTML = `<a href="#${item.id}">${item.title}</a>`;
                 ul.appendChild(li);
             });
@@ -318,21 +323,21 @@
 
     // --- SortableJS 初期化 ---
     function initSortable() {
-        const appDiv = document.getElementById('app');
-
-        // カテゴリーの並び替え
-        new Sortable(appDiv, {
-            animation: 150,
-            handle: '.category-header',
-            draggable: '.category-section',
-            ghostClass: 'sortable-ghost',
-            onEnd: function (evt) {
-                if (evt.oldIndex === evt.newIndex) return;
-                const item = appData.splice(evt.oldIndex, 1)[0];
-                appData.splice(evt.newIndex, 0, item);
-                saveData(); // 並び替え後に保存
-            }
-        });
+        // 目次でのカテゴリー並び替え
+        const tocList = document.getElementById('toc-list');
+        if (tocList) {
+            new Sortable(tocList, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: function (evt) {
+                    if (evt.oldIndex === evt.newIndex) return;
+                    // appData内の要素を入れ替え
+                    const item = appData.splice(evt.oldIndex, 1)[0];
+                    appData.splice(evt.newIndex, 0, item);
+                    saveData(); // 並び替え後に保存（完了後に自動でrenderされます）
+                }
+            });
+        }
 
         // 各カテゴリー内のテンプレート並び替え
         const tbodies = document.querySelectorAll('tbody');
@@ -347,7 +352,7 @@
                     const cIdx = parseInt(evt.from.dataset.catIndex);
                     const item = appData[cIdx].templates.splice(evt.oldIndex, 1)[0];
                     appData[cIdx].templates.splice(evt.newIndex, 0, item);
-                    saveData(); // 並び替え後に保存
+                    saveData();
                 }
             });
         });
