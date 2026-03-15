@@ -134,11 +134,20 @@
 
                     <div>
                         <h3 class="font-bold text-lg border-b pb-2 mb-3 flex items-center gap-2">
+                            <span class="text-xl">↕️</span> 項目の並び替え
+                        </h3>
+                        <p class="text-gray-700 text-sm leading-relaxed">
+                            操作ボタンの右横にある <code class="bg-gray-100 text-gray-800 px-2 py-0.5 rounded text-xs">⬆️</code> <code class="bg-gray-100 text-gray-800 px-2 py-0.5 rounded text-xs">⬇️</code> ボタンをクリックすることで、カテゴリー内でのテンプレートの表示順を変更できます。
+                        </p>
+                    </div>
+
+                    <div>
+                        <h3 class="font-bold text-lg border-b pb-2 mb-3 flex items-center gap-2">
                             <span class="text-xl">➕</span> テンプレートの追加 / 削除
                         </h3>
                         <p class="text-gray-700 text-sm">
                             各カテゴリーの一番下にある <code class="bg-[#8e44ad] text-white px-2 py-0.5 rounded text-xs">➕ 項目追加</code> ボタンを押すと、そのカテゴリーに新しい空のテンプレートが作成されます。<br>
-                            不要になったテンプレートは <code class="bg-[#e74c3c] text-white px-2 py-0.5 rounded text-xs">🗑️ 削除</code> ボタンで消去できます。（確認メッセージが出ます）
+                            不要になったテンプレートは <code class="bg-[#e74c3c] text-white px-2 py-0.5 rounded text-xs">🗑️ 削除</code> ボタンで消去できます。
                         </p>
                     </div>
                 </div>
@@ -153,16 +162,27 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                         <div class="bg-gray-50 p-4 border rounded">
                             <strong class="block text-[#2c3e50] mb-1">カテゴリーの追加</strong>
-                            <p class="text-gray-600">画面の一番下にある <code class="bg-[#2c3e50] text-white px-2 py-0.5 rounded text-xs">📂 新しいカテゴリーを追加する</code> ボタンをクリックし、名前を入力します。</p>
+                            <p class="text-gray-600">画面の一番下にある <code class="bg-[#2c3e50] text-white px-2 py-0.5 rounded text-xs">📂 新しいカテゴリーを追加する</code> ボタンをクリックします。</p>
                         </div>
                         <div class="bg-gray-50 p-4 border rounded">
                             <strong class="block text-[#2c3e50] mb-1">カテゴリー名の変更</strong>
                             <p class="text-gray-600">カテゴリー名の右側にある <code class="bg-[#f1c40f] text-gray-800 px-2 py-0.5 rounded text-xs">名前変更</code> ボタンから変更できます。</p>
                         </div>
-                        <div class="bg-gray-50 p-4 border rounded sm:col-span-2">
-                            <strong class="block text-red-600 mb-1">⚠️ カテゴリーの削除</strong>
-                            <p class="text-gray-600"><code class="bg-[#e74c3c] text-white px-2 py-0.5 rounded text-xs">カテゴリ削除</code> ボタンを押すと、<strong>そのカテゴリー内のテンプレートごと全て削除されます。</strong>誤操作に十分ご注意ください。</p>
+                        <div class="bg-gray-50 p-4 border rounded">
+                            <strong class="block text-[#2c3e50] mb-1 text-blue-600">カテゴリーの並び替え</strong>
+                            <p class="text-gray-600">カテゴリー名横の <code class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">⬆️</code> <code class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">⬇️</code> で、カテゴリー自体の並び順を変更できます。</p>
                         </div>
+                        <div class="bg-red-50 p-4 border border-red-100 rounded">
+                            <strong class="block text-red-600 mb-1">⚠️ カテゴリーの削除</strong>
+                            <p class="text-gray-600"><code class="bg-[#e74c3c] text-white px-2 py-0.5 rounded text-xs">カテゴリ削除</code> ボタンを押すと、<strong>中身ごと全て削除されます。</strong>誤操作に十分ご注意ください。</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-100 p-4 rounded mt-4">
+                        <h4 class="font-bold text-gray-800 mb-1">💡 並び替えボタンが表示されないときは？</h4>
+                        <p class="text-xs text-gray-600 italic">
+                            「キーワード検索中」や「お気に入り絞り込み中」は、表示順が本来のデータ順と異なるため、誤操作防止のために並び替えボタン（⬆️⬇️）は非表示になります。順番を変えたい場合は、検索バーを空にしてください。
+                        </p>
                     </div>
                 </div>
             </section>
@@ -194,7 +214,7 @@
                         </h3>
                         <p class="text-sm leading-relaxed">
                             画面を下にスクロールすると、画面の右下に<strong>上向きの矢印ボタン（トップへ戻る）</strong>が表示されます。<br>
-                            このボタンをクリックすると、ページの一番上までスムーズに自動スクロールします。テンプレートを探して画面のずっと下の方まで移動した後に、上部の検索バーやメニューに素早く戻りたい時にとても便利です。
+                            このボタンをクリックすると、ページの一番上までスムーズに自動スクロールします。
                         </p>
                     </div>
                 </div>
