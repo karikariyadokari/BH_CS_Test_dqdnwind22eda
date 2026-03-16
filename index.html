@@ -6,6 +6,88 @@
     <title>バウンティハンターズ CS対応テンプレート管理</title>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <style>
+        /* --- クレーンギミック：挙動強化版 --- */
+        .logo-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            z-index: 10;
+        }
+
+        .crane-arm-wire {
+            position: absolute;
+            top: 35px;
+            left: 50%;
+            width: 2px;
+            height: 0;
+            background: #7f8c8d;
+            transform: translateX(-50%);
+            /* 昇降スピードを0.8秒に設定 */
+            transition: height 0.8s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+            z-index: -1;
+        }
+
+        .crane-claw {
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* 爪の基本設定 */
+        .crane-claw::before, .crane-claw::after {
+            content: '';
+            width: 4px;
+            height: 12px;
+            background: var(--fav);
+            border-radius: 2px;
+            /* 【戻る時の設定】アームが戻りきる(0.8s)まで待ってから開く */
+            transition: transform 0.2s 0.8s;
+        }
+
+        /* 開いた状態の角度 */
+        .crane-claw::before { transform: rotate(35deg); transform-origin: top right; }
+        .crane-claw::after { transform: rotate(-35deg); transform-origin: top left; }
+
+        .crane-treasure {
+            position: absolute;
+            bottom: -22px;
+            left: 50%;
+            transform: translateX(-50%) scale(0);
+            font-size: 18px;
+            opacity: 0;
+            /* 【戻る時の設定】上に戻るまで消えないように遅延させる */
+            transition: transform 0.2s 0.8s, opacity 0s 0.8s;
+        }
+
+        /* --- active状態（動作中）のアニメーション --- */
+
+        /* 1. アームが降りる */
+        .logo-container.active .crane-arm-wire {
+            height: 70px;
+        }
+
+        /* 2. 降りきった(0.8s後)に爪が閉じる（掴む動作） */
+        .logo-container.active .crane-claw::before,
+        .logo-container.active .crane-claw::after {
+            transition: transform 0.2s 0.8s; /* 0.8秒待ってから0.2秒で閉じる */
+            transform: rotate(5deg);
+        }
+
+        /* 3. 掴む瞬間にアイテムを出現させる */
+        .logo-container.active .crane-treasure {
+            transition: transform 0.2s 0.9s, opacity 0s 0.9s; /* 掴むのとほぼ同時に出現 */
+            transform: translateX(-50%) scale(1);
+            opacity: 1;
+        }
+
         :root { --primary: #2c3e50; --secondary: #3498db; --bg: #f4f7f9; --success: #2ecc71; --danger: #e74c3c; --warning: #f1c40f; --fav: #f39c12; }
         body { font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif; line-height: 1.6; color: #333; background-color: var(--bg); margin: 0; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -82,7 +164,13 @@
 
 <div class="container">
     <h1>
-        <img src="channels4_profile.jpg" alt="Logo">
+        <div class="logo-container" onclick="toggleCrane(this)">
+            <img src="channels4_profile.jpg" alt="Logo">
+            <div class="crane-arm-wire">
+                <div class="crane-claw"></div>
+                <div id="treasure-icon" class="crane-treasure">📄</div>
+            </div>
+        </div>
         <span>バウンティハンターズ CS対応テンプレート管理</span>
     </h1>
     
@@ -445,6 +533,23 @@
         const r = new FileReader();
         r.onload = (ev) => { try { appData = JSON.parse(ev.target.result); saveData(true); } catch(e){ alert("エラー"); } };
         r.readAsText(e.target.files[0]);
+    }
+
+    // クレーンギミックの制御
+    function toggleCrane(element) {
+        if (element.classList.contains('active')) return;
+
+        // レアアイテム抽選（📄が通常、その他がレア）
+        const items = ['📄', '📄', '📄', '📄', '📄', '🔥', '💎', '✨', '🎁', '👑'];
+        const randomItem = items[Math.floor(Math.random() * items.length)];
+        document.getElementById('treasure-icon').innerText = randomItem;
+
+        element.classList.add('active');
+        
+        // 降りる(0.8s) + 掴む(0.2s) + 溜め(1.0s) + 戻る(0.8s) 程度を確保
+        setTimeout(() => {
+            element.classList.remove('active');
+        }, 3500);
     }
     window.onload = init;
 </script>
