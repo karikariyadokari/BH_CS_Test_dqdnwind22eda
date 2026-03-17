@@ -214,6 +214,12 @@
     const FAV_KEY = 'bh_cs_favorites'; 
     const USER_KEY = 'bh_cs_username'; 
 
+    // --- 👇 ここから追加 👇 ---
+    let saveTimeout = null;
+    let isSaving = false;
+    let pendingSave = false;
+    // --- 👆 ここまで追加 👆 ---
+
     function initEditorName() {
         let name = localStorage.getItem(USER_KEY);
         if (!name) {
@@ -260,11 +266,10 @@
         }
     }
 
-    async function saveData(force = false, silent = false) {
-        if (!API_URL.startsWith("https://script.google.com")) {
-            if(!silent) showToast('オフラインのため保存できません');
-            return;
-        }
+    // --- 👇 既存のsaveDataを以下に置き換え 👇 ---
+    async function executeSave(force = false, silent = false) {
+        if (!API_URL.startsWith("https://script.google.com")) return;
+        isSaving = true; // 通信中フラグをON
         const payload = { lastSyncTime: force ? 0 : lastSyncTime, data: appData };
         try {
             const response = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
@@ -274,11 +279,42 @@
                 init(); 
             } else {
                 lastSyncTime = parseInt(result);
-                if(!silent) showToast('保存・同期しました');
-                render();
+                if(!silent) showToast('クラウドに保存しました');
+                // ※ここでは render() を呼びません（すでに画面は更新済みのため）
             }
-        } catch(e) { if(!silent) alert("通信エラー"); }
+        } catch(e) { 
+            if(!silent) console.error("通信エラー", e); 
+        } finally {
+            isSaving = false; // 通信中フラグをOFF
+            // 通信中に保留されていた変更があれば再実行
+            if (pendingSave) {
+                pendingSave = false;
+                executeSave(false, true); 
+            }
+        }
     }
+
+    // UIの各操作からはこの関数を呼び出します
+    function saveData(force = false, silent = false, instant = false) {
+        if (!API_URL.startsWith("https://script.google.com")) {
+            if(!silent) showToast('オフラインのため保存できません');
+            return;
+        }
+
+        clearTimeout(saveTimeout);
+        if (instant) {
+            // 即時保存（バックアップや手動同期などの明示的なアクション時）
+            if (isSaving) pendingSave = true;
+            else executeSave(force, silent);
+        } else {
+            // 連続操作対策：最後の操作から2秒後に裏側で保存処理を開始する
+            saveTimeout = setTimeout(() => {
+                if (isSaving) pendingSave = true;
+                else executeSave(force, silent);
+            }, 2000);
+        }
+    }
+    // --- 👆 ここまで 👆 ---
 
     function render() {
         const appDiv = document.getElementById('app');
@@ -419,10 +455,11 @@
                 ghostClass: 'sortable-ghost',
                 onEnd: function (evt) {
                     if (evt.oldIndex === evt.newIndex) return;
-                    // appData内の要素を入れ替え
                     const item = appData.splice(evt.oldIndex, 1)[0];
                     appData.splice(evt.newIndex, 0, item);
-                    saveData(); // 並び替え後に保存（完了後に自動でrenderされます）
+                    
+                    render(); // 👈 ここを追加：データ順に合わせて本体も再描画する
+                    saveData(false, true);
                 }
             });
         }
@@ -440,7 +477,9 @@
                     const cIdx = parseInt(evt.from.dataset.catIndex);
                     const item = appData[cIdx].templates.splice(evt.oldIndex, 1)[0];
                     appData[cIdx].templates.splice(evt.newIndex, 0, item);
-                    saveData();
+                    
+                    render(); // 👈 ここを追加：インデックス(cIndex, tIndex)を最新に更新
+                    saveData(false, true);
                 }
             });
         });
@@ -468,20 +507,11 @@
         navigator.clipboard.writeText(text).then(() => {
             appData[cIndex].templates[tIndex].copyCount = (appData[cIndex].templates[tIndex].copyCount || 0) + 1;
             showToast('コピーしました！');
-            saveData(false, true); 
+            render(); // コピー回数を即画面に反映
+            saveData(false, true); // 裏側で保存
         });
     }
 
-    function toggleFavorite(id) {
-        let f = getFavorites();
-        f = f.includes(id) ? f.filter(x => x !== id) : [...f, id];
-        localStorage.setItem(FAV_KEY, JSON.stringify(f));
-        render();
-    }
-    
-    function startEdit(c, t) { editingState = { catIndex: c, tplIndex: t }; render(); }
-    function cancelEdit() { editingState = { catIndex: null, tplIndex: null }; render(); }
-    
     function saveTemplate(c, t) {
         const now = new Date();
         const ts = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}`;
@@ -491,34 +521,67 @@
         appData[c].templates[t].lastEditedBy = localStorage.getItem(USER_KEY) || "担当者";
         appData[c].templates[t].lastEditedAt = ts;
         editingState = { catIndex: null, tplIndex: null };
-        saveData();
+        render(); // 即座に編集モードを終了して画面に反映
+        saveData(false, true);
     }
 
-    function deleteTemplate(c, t) { if(confirm('項目を削除しますか？')) { appData[c].templates.splice(t, 1); saveData(); } }
+    function deleteTemplate(c, t) { 
+        if(confirm('項目を削除しますか？')) { 
+            appData[c].templates.splice(t, 1); 
+            render(); // 即座に画面から消す
+            saveData(false, true); 
+        } 
+    }
+
+    function startEdit(cIndex, tIndex) {
+        editingState = { catIndex: cIndex, tplIndex: tIndex };
+        render(); // 編集モードに切り替えるために再描画
+    }
+
+    function cancelEdit() {
+        editingState = { catIndex: null, tplIndex: null };
+        render();
+    }
     
     function addNewTemplate(c) {
         appData[c].templates.push({ id: 't_'+Date.now(), title: '', tags: '', content: '', copyCount: 0 });
-        startEdit(c, appData[c].templates.length - 1);
+        startEdit(c, appData[c].templates.length - 1); // ここでrenderが実行されます
+        saveData(false, true);
     }
     
     function editCategory(c) {
         const n = prompt('新カテゴリ名', appData[c].title);
-        if (n) { appData[c].title = n; saveData(); }
+        if (n) { 
+            appData[c].title = n; 
+            render(); // 即座に画面に反映
+            saveData(false, true); 
+        }
     }
     
     function deleteCategory(cIndex) {
         if (confirm(`⚠️ カテゴリ「${appData[cIndex].title}」を丸ごと削除しますか？`)) {
             appData.splice(cIndex, 1);
-            saveData();
+            render(); // 即座に画面から消す
+            saveData(false, true);
         }
     }
     
     function addNewCategory() {
         const n = prompt('新しいカテゴリー名');
         if (n && n.trim()) {
-            appData.push({ id: 'cat_'+Date.now(), title: n.trim(), templates: [] });
-            addNewTemplate(appData.length - 1);
-            saveData();
+            const newCat = { id: 'cat_'+Date.now(), title: n.trim(), templates: [] };
+            appData.push(newCat);
+            
+            // テンプレートも1つ空の状態で追加する（任意）
+            appData[appData.length - 1].templates.push({ 
+                id: 't_'+Date.now(), title: '', tags: '', content: '', copyCount: 0 
+            });
+            
+            render(); // 👈 これで画面に即座に新しいカテゴリーが出現します
+            saveData(false, true);
+            
+            // そのまま編集モードへ
+            startEdit(appData.length - 1, 0);
         }
     }
     
