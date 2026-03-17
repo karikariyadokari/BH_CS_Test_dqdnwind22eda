@@ -713,6 +713,25 @@
             btn.disabled = false;
         }
     }
+
+    // お気に入りの切り替え機能
+    function toggleFavorite(id) {
+        let favs = getFavorites();
+        
+        if (favs.includes(id)) {
+            // すでにお気に入りの場合は削除
+            favs = favs.filter(favId => favId !== id);
+            showToast('お気に入りから解除しました');
+        } else {
+            // お気に入りではない場合は追加
+            favs.push(id);
+            showToast('お気に入りに追加しました');
+        }
+        
+        // ローカルストレージに保存して画面を再描画
+        localStorage.setItem(FAV_KEY, JSON.stringify(favs));
+        render();
+    }
     window.onload = init;
 </script>
 </body>
